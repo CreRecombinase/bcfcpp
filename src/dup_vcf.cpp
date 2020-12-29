@@ -1,7 +1,6 @@
 #include "cxxopts.hpp"
-#include "htslib/vcf.h"
-#include "htslib/hts.h"
-#include "htslib/synced_bcf_reader.h"
+#include "bcfcpp.hpp"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -11,6 +10,8 @@
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/indices.hpp>
+#include <range/v3/core.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <string_view>
 #include <optional>
 
@@ -31,7 +32,7 @@ void find_and_increment(std::string_view sv,std::unordered_map<size_t,char>& ssv
       std::cout<<sv<<std::endl;
       fsf->second=1;
     }
-  } 
+  }
 }
 
 
@@ -43,7 +44,6 @@ int main(int argc, char** argv){
   options.add_options()
     ("f,file", "VCF/BCF input file", cxxopts::value<std::vector<std::string>>())
     ("s,sync", "whether to use the synced reader", cxxopts::value<bool>()->default_value("false"))
-    ("f,file", "VCF/BCF input file", cxxopts::value<std::vector<std::string>>())
     ("h,help", "Print usage");
   auto result = options.parse(argc, argv);
    if (result.count("help"))
@@ -57,12 +57,13 @@ int main(int argc, char** argv){
       return 1;
     }
    vcf_files=result["file"].as<std::vector<std::string>>();
+   std::unordered_map<size_t,char> all_ids;
    if(result.count("sync")>0){
      std::unique_ptr<bcf_srs_t,decltype(&bcf_sr_destroy)> sr(bcf_sr_init(),&bcf_sr_destroy);
      std::for_each(vcf_files.begin(),vcf_files.end(),[&sr](const auto &i){
        bcf_sr_add_reader(sr.get(),i.c_str());
      });
-     std::unordered_map<size_t,char> all_ids;
+
      auto enumerated_vcfs = ranges::views::enumerate(vcf_files);
      std::string_view lds;
      int j=0;
@@ -79,9 +80,19 @@ int main(int argc, char** argv){
          }
      }
    }else{
-     auto hts_rng = ranges::views::all(vcf_files) | ranges::views::transform([](const std::string& str){
-       return std::unique_ptr<htsFile,decltype(&hts_close)> (hts_open(str.c_str(),'r'),&hts_close);
-     });
+     //     std::unique_ptr<bcf_srs_t,decltype(&bcf_sr_destroy)> sr(bcf_sr_init(),&bcf_sr_destroy);
+     int j=0;
+     for(auto it = vcf_files.begin(); it !=vcf_files.end(); it++){
+       BCFFile bcf(std::string_view{*it},std::string_view{"r"});
+       auto mrng = ranges::getlines_hts_view<BCF_UN_STR>(bcf);
+       //for( auto line = mrng.begin(); line!=mrng.end(); line++){
+       ranges::for_each(mrng,[&all_ids,&j](UnpackedBCFLine<BCF_UN_STR>& line) mutable{
+         if(auto li =line.get_ID())
+           find_and_increment(*li,all_ids,j++);
 
+       });
+
+     }
+   }
   return 0;
 }

@@ -87,7 +87,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = dup_vcf$(EXEEXT)
+bin_PROGRAMS = dup_vcf$(EXEEXT) header_info$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_17.m4 \
@@ -107,6 +107,11 @@ dup_vcf_OBJECTS = $(am_dup_vcf_OBJECTS)
 dup_vcf_LDADD = $(LDADD)
 dup_vcf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(dup_vcf_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_header_info_OBJECTS = header_info-header_info.$(OBJEXT)
+header_info_OBJECTS = $(am_header_info_OBJECTS)
+header_info_LDADD = $(LDADD)
+header_info_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(header_info_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -122,7 +127,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/dup_vcf-dup_vcf.Po
+am__depfiles_remade = ./$(DEPDIR)/dup_vcf-dup_vcf.Po \
+	./$(DEPDIR)/header_info-header_info.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -141,8 +147,20 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(dup_vcf_SOURCES)
-DIST_SOURCES = $(dup_vcf_SOURCES)
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_@AM_V@)
+am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
+am__v_CC_0 = @echo "  CC      " $@;
+am__v_CC_1 = 
+CCLD = $(CC)
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_@AM_V@)
+am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+am__v_CCLD_0 = @echo "  CCLD    " $@;
+am__v_CCLD_1 = 
+SOURCES = $(dup_vcf_SOURCES) $(header_info_SOURCES)
+DIST_SOURCES = $(dup_vcf_SOURCES) $(header_info_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -287,10 +305,13 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-dup_vcf_SOURCES = dup_vcf.cpp
+dup_vcf_SOURCES = dup_vcf.cpp bcfcpp.hpp
 dup_vcf_CPPFLAGS = $(HTS_CFLAGS) -I$(top_srcdir)/include
-include_HEADERS = ../
 dup_vcf_LDFLAGS = $(HTS_LIBS)
+header_info_SOURCES = header_info.cpp bcfcpp.hpp
+header_info_CPPFLAGS = $(HTS_CFLAGS) -I$(top_srcdir)/include
+header_info_LDFLAGS = $(HTS_LIBS)
+include_HEADERS = ../
 all: all-am
 
 .SUFFIXES:
@@ -371,6 +392,10 @@ dup_vcf$(EXEEXT): $(dup_vcf_OBJECTS) $(dup_vcf_DEPENDENCIES) $(EXTRA_dup_vcf_DEP
 	@rm -f dup_vcf$(EXEEXT)
 	$(AM_V_CXXLD)$(dup_vcf_LINK) $(dup_vcf_OBJECTS) $(dup_vcf_LDADD) $(LIBS)
 
+header_info$(EXEEXT): $(header_info_OBJECTS) $(header_info_DEPENDENCIES) $(EXTRA_header_info_DEPENDENCIES) 
+	@rm -f header_info$(EXEEXT)
+	$(AM_V_CXXLD)$(header_info_LINK) $(header_info_OBJECTS) $(header_info_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -378,6 +403,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dup_vcf-dup_vcf.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/header_info-header_info.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -412,6 +438,20 @@ dup_vcf-dup_vcf.obj: dup_vcf.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dup_vcf.cpp' object='dup_vcf-dup_vcf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dup_vcf_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dup_vcf-dup_vcf.obj `if test -f 'dup_vcf.cpp'; then $(CYGPATH_W) 'dup_vcf.cpp'; else $(CYGPATH_W) '$(srcdir)/dup_vcf.cpp'; fi`
+
+header_info-header_info.o: header_info.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(header_info_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT header_info-header_info.o -MD -MP -MF $(DEPDIR)/header_info-header_info.Tpo -c -o header_info-header_info.o `test -f 'header_info.cpp' || echo '$(srcdir)/'`header_info.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/header_info-header_info.Tpo $(DEPDIR)/header_info-header_info.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='header_info.cpp' object='header_info-header_info.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(header_info_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o header_info-header_info.o `test -f 'header_info.cpp' || echo '$(srcdir)/'`header_info.cpp
+
+header_info-header_info.obj: header_info.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(header_info_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT header_info-header_info.obj -MD -MP -MF $(DEPDIR)/header_info-header_info.Tpo -c -o header_info-header_info.obj `if test -f 'header_info.cpp'; then $(CYGPATH_W) 'header_info.cpp'; else $(CYGPATH_W) '$(srcdir)/header_info.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/header_info-header_info.Tpo $(DEPDIR)/header_info-header_info.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='header_info.cpp' object='header_info-header_info.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(header_info_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o header_info-header_info.obj `if test -f 'header_info.cpp'; then $(CYGPATH_W) 'header_info.cpp'; else $(CYGPATH_W) '$(srcdir)/header_info.cpp'; fi`
 install-includeHEADERS: $(include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
@@ -562,6 +602,7 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/dup_vcf-dup_vcf.Po
+	-rm -f ./$(DEPDIR)/header_info-header_info.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -608,6 +649,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/dup_vcf-dup_vcf.Po
+	-rm -f ./$(DEPDIR)/header_info-header_info.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

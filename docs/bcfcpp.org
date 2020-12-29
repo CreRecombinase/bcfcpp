@@ -1,0 +1,27 @@
+#+TITLE: bcfcpp
+#+AUTHOR: Nicholas Knoblauch
+
+
+* BCF header
+
+Each line of a bcf header is represented as a ~bcf_hrec_t~.  A header
+line may be one of the following "HL" types:
+    + INFO about an info field
+    + FMT about a format field
+    + CTG about a contig
+    + STR "structured header line"
+    + GEN generic
+      
+** "Master" object
+   The "root" struct is the ~hdr_hdr_t~ which is constructed via ~bcf_hdr_read~ on the ~htsFile~.
+   
+  This struct stores 3 key-value hashes for :
+  1) ID
+  2) Contig
+  3) Sample
+
+  Each of these can be iterated by iterating the three ~bcf_idpair_t~ arrays (which are of size ~n[0],n[1],n[2]~ respectively)
+
+  I believe that alternatively, if you know the header fields you are interested in, you can get their id
+  using the bcf_hdr_id2int.  You 
+#  the type of the line (
