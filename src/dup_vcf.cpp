@@ -1,6 +1,6 @@
 #include "cxxopts.hpp"
 #include "bcfcpp.hpp"
-
+#include "hts_bcf_getlines.hpp"
 #include <memory>
 #include <string>
 #include <unordered_map>
