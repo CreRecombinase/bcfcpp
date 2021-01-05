@@ -4796,6 +4796,12 @@ $as_echo "#define HAVE_CXX17 1" >>confdefs.h
   fi
 
 
+#AX_CXX_COMPILE_STDCXX([20])
+
+
+
+
+
 
 # This suppresses the error we get for also having the cc version of helper library.
 

@@ -60,7 +60,7 @@ public:
   auto sample_range(int n_samples)const {
     ranges::span<unsigned char*> data_r(&fmt->p,fmt->n);
     auto chunk_data_r =ranges::views::chunk(data_r,n_samples) | ranges::views::transform([&](auto &&r){
-      return bcf_fmt_conversion_range<T>(begin(r));
+      return bcf_fmt_conversion_range<T>(*std::begin(r));
     });
     return chunk_data_r;
   }
@@ -69,11 +69,11 @@ public:
 
 using FMT_v =
     std::variant<std::monostate, LineFMT<std::int8_t>, LineFMT<std::int16_t>,
-                 LineFMT<std::int32_t>, LineFMT<std::int64_t>, LineFMT<float>,
-                 LineFMT<char>>;
+                 LineFMT<std::int32_t>, LineFMT<std::int64_t>, LineFMT<float>
+                 >;
 using v_FMT_v = std::variant<LineFMT<std::int8_t>, LineFMT<std::int16_t>,
                              LineFMT<std::int32_t>, LineFMT<std::int64_t>,
-                             LineFMT<float>, LineFMT<char>>;
+                             LineFMT<float>>;
 
 
 // TODO : figure out how to drop the monostate and

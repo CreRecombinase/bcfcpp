@@ -10,6 +10,22 @@ AC_LANG(C++)
 # Let's set a C++ compiler
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_17
+#AX_CXX_COMPILE_STDCXX([20])
+
+
+
+dnl AC_ARG_ENABLE(debug,
+dnl AS_HELP_STRING([--enable-debug],
+dnl                [enable debugging, default: no]),
+dnl [case "${enableval}" in
+dnl              yes) debug=true ;;
+dnl              no)  debug=false ;;
+dnl              *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+dnl esac],
+dnl [debug=false])
+
+dnl AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
+
 
 # This suppresses the error we get for also having the cc version of helper library.
 

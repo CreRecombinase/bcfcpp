@@ -1,0 +1,16 @@
+.clangd*
+autom4te*
+Makefile.in
+src/Makefile.in
+src/EUR.chr19.bcf
+src/Makefile
+Makefile
+src/dup_vcf
+src/*.o
+src/header_info
+src/view_gt
+src/.deps/*
+config.log
+config.status
+compile_commands.json
+.vscode/
