@@ -51,10 +51,6 @@ int main(int argc, char** argv){
 
 
 
-
-
-
-
      //     std::unique_ptr<bcf_srs_t,decltype(&bcf_sr_destroy)> sr(bcf_sr_init(),&bcf_sr_destroy);
   int j=0;
   for(auto it = vcf_files.begin(); it !=vcf_files.end(); it++){
@@ -65,15 +61,23 @@ int main(int argc, char** argv){
       std::cerr<<"File must have gt field";
       return 1;
     }
+    std::cout<<"GT has tag_id "<<*tag_id<<std::endl;
     auto sample_v = bcf.header.view_samples();
 
-    auto mrng = ranges::getlines_hts_view<BCF_UN_FMT>(bcf) | ranges::views::transform([=](UnpackedBCFLine<BCF_UN_FMT> &line) {
-      return line.get_v_FMT(*tag_id);
-    });
-    auto i_mrng=ranges::views::enumerate(mrng);
-    ranges::for_each(i_mrng,[&](auto && fmtvi){
-      auto [i,fmtv] = fmtvi;
-      std::cout<<"Variant "<<i<<std::endl;
+    auto mrng = ranges::getlines_hts_view<BCF_UN_FMT>(bcf);
+
+
+    ranges::for_each(mrng,[&](const UnpackedBCFLine<BCF_UN_FMT> &fmtl){
+      auto ids = ranges::views::counted(fmtl.line->d.fmt,fmtl.line->n_fmt);
+      std::cout<<"There are "<<fmtl.line->n_fmt<<" format fields for this line"<<std::endl;
+      ranges::for_each(ids,[&](const auto &tfmt){
+        const bcf_hdr_t* hdr = bcf.header.header;
+        std::cout<<"Format ID:"<<hdr->id[BCF_DT_ID][tfmt.id].key<<std::endl;
+        std::cout<<"Format Type:"<<(tfmt.type)<<std::endl;
+      });
+      std::cout<<"Variant chr"<<fmtl.get_chr_id()<<":"<<fmtl.get_pos()<<std::endl;
+
+      auto fmtv = fmtl.get_v_FMT(*tag_id);
       std::visit([&](auto &&arg){
         auto sr = arg.sample_range(nsamples);
 

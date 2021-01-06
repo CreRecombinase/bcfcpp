@@ -63,7 +63,7 @@ namespace ranges
       {
         this->next(); // prime the pump
       }
-      BCFLine & cached() noexcept
+      UnpackedBCFLine<Fields> & cached() noexcept
       {
         return str_;
       }
@@ -79,6 +79,16 @@ template <int Fields=BCF_UN_ALL>
   };
 
   RANGES_INLINE_VARIABLE(getlines_hts_fn, getlines_hts)
+
+
+
+
+
+
+
+
+
+
   /// @}
 } // namespace ranges
 

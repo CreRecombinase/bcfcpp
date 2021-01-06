@@ -8,6 +8,7 @@
 #include "htslib/synced_bcf_reader.h"
 #include "range/v3/view/counted.hpp"
 #include "range/v3/view/transform.hpp"
+#include "range/v3/algorithm/find_if.hpp"
 #include <math.h>
 #include "hts_ranges.hpp"
 #include <iostream>
@@ -38,14 +39,13 @@
 #include <string_view>
 
 
-class BCFLine{
-public:
-  bcf1_t *line;
-  BCFLine():line(bcf_init1()){};
-  ~BCFLine(){
-    bcf_destroy1(line);
-  };
-};
+// class BCFLine{
+// public:
+
+//   ~BCFLine(){
+
+//   };
+// };
 
 
 template<typename T>
@@ -259,35 +259,29 @@ public:
   BCFHeader header;
 
   BCFFile(std::string_view file_name, std::string_view args="r"):file(file_name,args),header(file){};
-
-  
 };
 
-
-template<int Fields=BCF_UN_ALL>
-class UnpackedBCFLine:public BCFLine{
+class BCFFmts{
 public:
-  UnpackedBCFLine(){
-    //    bcf_unpack(line,Fields);
-  };
-  std::optional<std::string_view> get_ID(){
-    if(line->d.id[0]=='.')
-      return std::nullopt;
-    return std::string_view(line->d.id);
-  }
-  int get_line_id(const int header_id) const{
-    const bcf_fmt_t *fmtb = line->d.fmt;
-    const bcf_fmt_t* fmte = line->d.fmt+line->n_fmt;
-    auto fr = std::find(fmtb,fmte,[&header_id](const bcf_fmt_t &fmt){
-      return fmt.id==header_id;
+  ranges::subrange<bcf_fmt_t *,bcf_fmt_t *, ranges::subrange_kind::sized> fmtr;
+  BCFFmts(bcf_fmt_t* fmt_,const int n_fmt_):fmtr(ranges::views::counted(fmt_,n_fmt_)){};
+  auto fmt_ids() const{
+    return ranges::views::transform(fmtr,[](const bcf_fmt_t& fmt){
+      return fmt.id;
     });
-    return fr-fmtb;
   }
-  FMT_v get_FMT(int i){
-    auto fmt = &line->d.fmt[i];
-    if(!fmt->p){
-      return std::monostate{};
+  std::optional<v_FMT_v> get_FMT_tag(int tag_id){
+    auto fmtp = ranges::find_if(fmtr,[&](const bcf_fmt_t& fmt){
+      return fmt.id==tag_id;
+    });
+    if(fmtp==ranges::end(fmtr)){
+      return std::nullopt;
     }
+    return make_FMT_v(fmtp);
+  }
+
+protected:
+  v_FMT_v make_FMT_v(bcf_fmt_t* fmt) const{
     switch (fmt->type) {
     case BCF_BT_INT8:
       return LineFMT<std::int8_t>(fmt);
@@ -303,7 +297,41 @@ public:
       throw std::invalid_argument("Unexpected type "+std::to_string(fmt->type));
     }
   }
-  v_FMT_v get_v_FMT(int i){
+}
+
+
+template <int Fields = BCF_UN_ALL> class UnpackedBCFLine {
+public:
+  bcf1_t *line;
+  UnpackedBCFLine():line(bcf_init1()){
+    //    bcf_unpack(line,Fields);
+  };
+  ~UnpackedBCFLine(){bcf_destroy1(line);}
+  std::optional<std::string_view> get_ID(){
+    if(line->d.id[0]=='.')
+      return std::nullopt;
+    return std::string_view(line->d.id);
+  }
+  UnpackedBCFLine             (const  UnpackedBCFLine<Fields> &)  = delete;
+  int get_line_id(const int header_id) const{
+    const bcf_fmt_t *fmtb = line->d.fmt;
+    const bcf_fmt_t* fmte = line->d.fmt+line->n_fmt;
+    auto fr = std::find(fmtb,fmte,[&header_id](const bcf_fmt_t &fmt){
+      return fmt.id==header_id;
+    });
+    return fr-fmtb;
+  }
+  int32_t get_chr_id() const{
+    return line->rid;
+
+  }
+  int64_t get_pos() const {
+    return line->pos;
+  }
+  BCFFmts get_FMTs() const {
+    return BCFFmts(line->d.fmt,line->n_fmt);
+  }
+  v_FMT_v get_v_FMT_v(int i)const{
     auto fmt = &line->d.fmt[i];
     switch (fmt->type) {
     case BCF_BT_INT8:
@@ -340,49 +368,6 @@ public:
 
   }
 
-//   template<typename T>
-//   int copy_GT(const BCFFile & file, std::vector<T> &dest) const{
-
-
-
-
-//     // Make sure the buffer is big enough
-//     int nsmpl = file.header.num_samples();
-//     dest.reserve(nsmpl);
-
-
-//     #define BRANCH(type_t, convert, is_missing, is_vector_end, set_missing, set_vector_end, set_regular, out_type_t) { \
-//         out_type_t *tmp = (out_type_t *) *dst; \
-//         uint8_t *fmt_p = fmt->p; \
-//         for (i=0; i<nsmpl; i++) \
-//         { \
-//             for (j=0; j<fmt->n; j++) \
-//             { \
-//                 type_t p = convert(fmt_p + j * sizeof(type_t)); \
-//                 if ( is_missing ) set_missing; \
-//                 else if ( is_vector_end ) { set_vector_end; break; } \
-//                 else set_regular; \
-//                 tmp++; \
-//             } \
-//             for (; j<fmt->n; j++) { set_vector_end; tmp++; } \
-//             fmt_p += fmt->size; \
-//         } \
-//     }
-//     switch (fmt->type) {
-//         case BCF_BT_INT8:  BRANCH(int8_t,  le_to_i8, p==bcf_int8_missing,  p==bcf_int8_vector_end,  *tmp=bcf_int32_missing, *tmp=bcf_int32_vector_end, *tmp=p, int32_t); break;
-//         case BCF_BT_INT16: BRANCH(int16_t, le_to_i16, p==bcf_int16_missing, p==bcf_int16_vector_end, *tmp=bcf_int32_missing, *tmp=bcf_int32_vector_end, *tmp=p, int32_t); break;
-//         case BCF_BT_INT32: BRANCH(int32_t, le_to_i32, p==bcf_int32_missing, p==bcf_int32_vector_end, *tmp=bcf_int32_missing, *tmp=bcf_int32_vector_end, *tmp=p, int32_t); break;
-//         case BCF_BT_FLOAT: BRANCH(uint32_t, le_to_u32, p==bcf_float_missing, p==bcf_float_vector_end, bcf_float_set_missing(*tmp), bcf_float_set_vector_end(*tmp), bcf_float_set(tmp, p), float); break;
-//         default: hts_log_error("Unexpected type %d at %s:%" PRIhts_pos, fmt->type, bcf_seqname_safe(hdr,line), line->pos+1); exit(1);
-//     }
-//     #undef BRANCH
-//     return nsmpl*fmt->n;
-// }
-
-
-
-
-
 };
 
 
@@ -390,9 +375,9 @@ public:
 
 
 
-inline int getline_bcf(BCFFile &bcf_file,BCFLine &line){
-  return bcf_read((bcf_file.file.file), (bcf_file.header.header), (line.line));
-}
+// inline int getline_bcf(BCFFile &bcf_file,BCFLine &line){
+//   return bcf_read((bcf_file.file.file), (bcf_file.header.header), (line.line));
+// }
 
 template <int Fields=BCF_UN_ALL>
 inline int getline_bcf(BCFFile &bcf_file,UnpackedBCFLine<Fields> &line){
