@@ -46,6 +46,7 @@ int main(int argc, char** argv){
   options.add_options()
     ("f,file", "VCF/BCF input file", cxxopts::value<std::vector<std::string>>())
     ("i,info", "INFO fields to write to the database (comma separated)", cxxopts::value<std::vector<std::string>>())
+    ("s,sql", "Print SQL create table statement",cxxopts::value<bool>()->default_value("false"))
     ("h,help", "Print usage");
   auto result = options.parse(argc, argv);
   if (result.count("help"))
@@ -60,8 +61,8 @@ int main(int argc, char** argv){
   }
   vcf_files=result["file"].as<std::vector<std::string>>();
 
-     //     std::unique_ptr<bcf_srs_t,decltype(&bcf_sr_destroy)> sr(bcf_sr_init(),&bcf_sr_destroy);
-  int j=0;
+  //std::unique_ptr<bcf_srs_t,decltype(&bcf_sr_destroy)> sr(bcf_sr_init(),&bcf_sr_destroy);
+
   for(auto it = vcf_files.begin(); it !=vcf_files.end(); it++){
     BCFFile bcf(std::string_view{*it},std::string_view{"r"});
     std::cout<<"Number of IDs: "<<bcf.header.num_ID()<<", Contigs: "<<bcf.header.num_contigs()<<", Samples: "<<bcf.header.num_samples()<<", num header records: "<<bcf.header.num_header_records()<<std::endl;

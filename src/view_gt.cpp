@@ -77,7 +77,7 @@ int main(int argc, char** argv){
       });
       std::cout<<"Variant chr"<<fmtl.get_chr_id()<<":"<<fmtl.get_pos()<<std::endl;
 
-      auto fmtv = fmtl.get_v_FMT(*tag_id);
+      auto fmtv = fmtl.get_v_FMT_v(*tag_id);
       std::visit([&](auto &&arg){
         auto sr = arg.sample_range(nsamples);
 

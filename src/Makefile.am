@@ -1,10 +1,12 @@
-bin_PROGRAMS = dup_vcf header_info view_gt
+bin_PROGRAMS = dup_vcf header_info view_gt test_bcf
 dup_vcf_SOURCES = dup_vcf.cpp bcfcpp.hpp
 dup_vcf_CPPFLAGS = $(HTS_CFLAGS) -I$(top_srcdir)/include
 dup_vcf_LDFLAGS= $(HTS_LIBS)
 view_gt_SOURCES = view_gt.cpp bcfcpp.hpp
 view_gt_CPPFLAGS = $(HTS_CFLAGS) -I$(top_srcdir)/include
 view_gt_LDFLAGS= $(HTS_LIBS)
+test_bcf_SOURCES = test_bcf.cpp bcf.hpp
+test_bcf_CPPFLAGS = -I$(top_srcdir)/include
 header_info_SOURCES = header_info.cpp bcfcpp.hpp
 header_info_CPPFLAGS = $(HTS_CFLAGS) -I$(top_srcdir)/include
 header_info_LDFLAGS= $(HTS_LIBS)

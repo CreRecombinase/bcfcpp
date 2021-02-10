@@ -17,7 +17,7 @@
 #include <string>
 #include <variant>
 #include <stdexcept>
-
+#include "variantkey/variantkey.h"
 
 
 #include <range/v3/range_fwd.hpp>
@@ -37,6 +37,8 @@
 
 
 #include <string_view>
+
+
 
 
 // class BCFLine{
@@ -194,6 +196,15 @@ public:
     }
     return gt_id;
   }
+  std::string_view get_chrom(std::int32_t chrom_id) const {
+    auto ret = header->id[BCF_DT_CTG][chrom_id].key;
+    return ret;
+  };
+  std::uint8_t get_chrom_variantkey(std::int32_t chrom_id) const {
+    auto ret_chrom = get_chrom(chrom_id);
+    return encode_chrom(ret_chrom.data(),ret_chrom.size());
+
+  }
   // template<int which>
   // int get_idint(const char* id); const{
   //   static_assert(which>0 ,"get_idint must be with nonnegative value for 'which'");
@@ -226,14 +237,14 @@ public:
   }
   auto get_IDs() const {
     const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
-    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp){
+    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var{
       return idpair2HL(&idp);
     });
     return transformed_r;
   }
   auto get_INFOs() const {
     const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
-    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp){
+    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var {
       return idpair2HL(&idp);
     });
     auto filtered_r = ranges::views::filter(transformed_r,[](const vl_var &v) {
@@ -297,7 +308,14 @@ protected:
       throw std::invalid_argument("Unexpected type "+std::to_string(fmt->type));
     }
   }
-}
+};
+
+// class Variant{
+//   std::optional<std::string> id;
+//   std::int64_t pos;
+//   std::int32_t chrom_id;
+// }
+
 
 
 template <int Fields = BCF_UN_ALL> class UnpackedBCFLine {
@@ -323,13 +341,16 @@ public:
   }
   int32_t get_chr_id() const{
     return line->rid;
-
   }
   int64_t get_pos() const {
     return line->pos;
   }
   BCFFmts get_FMTs() const {
     return BCFFmts(line->d.fmt,line->n_fmt);
+  }
+
+  auto get_vars() const{
+
   }
   v_FMT_v get_v_FMT_v(int i)const{
     auto fmt = &line->d.fmt[i];
