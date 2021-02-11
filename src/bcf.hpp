@@ -6,7 +6,7 @@
 #include <array>
 #include <fstream>
 
-struct BCF_Header{
+struct __attribute__((__packed__)) BCF_Header{
   char magic[3];
   char major_version;
   char minor_version;
@@ -26,11 +26,12 @@ struct __attribute__((__packed__)) BCFBuff{
   int32_t pos;
   int32_t rlen;
   float qual;
-  int32_t n_allele: 16;
   int32_t n_info: 16;
-  uint32_t n_fmt : 8;
+  int32_t n_allele: 16;
   uint32_t n_sample : 24;
+  uint32_t n_fmt : 8;
 };
+
 
 
 class BCF{
@@ -58,12 +59,32 @@ class BCFRec{
 
   int32_t chrom;
   int32_t pos;
-  int32_t n_allele_info;
-  uint32_t n_fmt_sample;
   std::optional<float> qual;
   std::optional<std::string> id;
-
   std::vector<int> filtervec;
-
-
 };
+
+class BCFReader {
+  BCFRec bcfb;
+  std::ifstream& ifs;
+  std::vector<std::byte> shared_buff;
+  std::vector<std::byte> indiv_buff;
+  int getline_bcf_record(std::ifstream & ifs,BCFBuff &bcfb){
+  if(ifs){
+    ifs.read((char*) &bcfb,sizeof(bcfb));
+  }
+  shared_buff.resize(bcfb.l_shared);
+  indiv_buff.resize(bcfb.l_indiv);
+  ifs.read((char*)shared_buff.data(),shared_buff.size());
+  ifs.read((char*)indiv_buff.data(),indiv_buff.size());
+
+
+
+
+
+  };
+
+
+
+
+}
