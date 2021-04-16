@@ -70,21 +70,25 @@ class BCFReader {
   std::vector<std::byte> shared_buff;
   std::vector<std::byte> indiv_buff;
   int getline_bcf_record(std::ifstream & ifs,BCFBuff &bcfb){
-  if(ifs){
+    if(!ifs)
+      return 0;
     ifs.read((char*) &bcfb,sizeof(bcfb));
+
+    shared_buff.resize(bcfb.l_shared);
+    indiv_buff.resize(bcfb.l_indiv);
+    if(!ifs.read((char*)shared_buff.data(),shared_buff.size()))
+      return -1;
+    ifs.read((char*)indiv_buff.data(),indiv_buff.size());
+    return 1;
   }
-  shared_buff.resize(bcfb.l_shared);
-  indiv_buff.resize(bcfb.l_indiv);
-  ifs.read((char*)shared_buff.data(),shared_buff.size());
-  ifs.read((char*)indiv_buff.data(),indiv_buff.size());
 
 
 
 
 
-  };
 
 
 
 
-}
+
+};

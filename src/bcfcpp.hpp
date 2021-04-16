@@ -1,11 +1,6 @@
 #pragma once
 
-#include "htslib/khash_str2int.h"
-#include "htslib/khash.h"
-#include "htslib/kstring.h"
-#include "htslib/vcf.h"
-#include "htslib/hts.h"
-#include "htslib/synced_bcf_reader.h"
+#include "hts_includes.hpp"
 #include "range/v3/view/counted.hpp"
 #include "range/v3/view/transform.hpp"
 #include "range/v3/algorithm/find_if.hpp"
@@ -85,14 +80,202 @@ using v_FMT_v = std::variant<LineFMT<std::int8_t>, LineFMT<std::int16_t>,
 //   }
 // }
 
+class BCFHeader{
+public:
+  bcf_hdr_t * header;
+  mutable std::optional<int> gt_id;
+  BCFHeader():header(nullptr){}
+  ~BCFHeader(){
+    if(header)
+      bcf_hdr_destroy(header);
+  }
+  std::optional<int> get_GT_id() const{
+    if(!gt_id){
+      int tag_id = bcf_hdr_id2int(header, BCF_DT_ID, "GT");
+      if (bcf_hdr_idinfo_exists(header,BCF_HL_FMT,tag_id) )
+        gt_id=tag_id;    // no such FORMAT field in the header
+    }
+    return gt_id;
+  }
+  BCFHeader( const BCFHeader& other):
+    header(bcf_hdr_dup(other.header)){}
+
+  BCFHeader& operator=( const BCFHeader& other){
+    return *this = BCFHeader(other);
+  }
+  BCFHeader& operator=(BCFHeader&& other) noexcept{
+    if(this->header){
+      bcf_hdr_destroy(this->header);
+      this->header = nullptr;
+    }
+    std::swap(this->header,other.header);
+    return *this;
+  }
+  BCFHeader(BCFHeader&& other) noexcept: header(other.header){
+      other.header = nullptr;
+  }
+
+  template<typename F>
+  void update_chrom_header(F &&f){
+    auto ctg =header->id[BCF_DT_CTG];
+    std::for_each_n(header->id[BCF_DT_CTG],header->id[BCF_DT_CTG]+num_contigs(),[](${1:_InputIterator __first}, ${2:_Size __orig_n}, ${3:_Function __f})
+
+
+
+  }
+  std::string_view get_chrom(std::int32_t chrom_id) const {
+    auto ret = header->id[BCF_DT_CTG][chrom_id].key;
+    return ret;
+  };
+  std::uint8_t get_chrom_variantkey(std::int32_t chrom_id) const {
+    auto ret_chrom = get_chrom(chrom_id);
+    return encode_chrom(ret_chrom.data(),ret_chrom.size());
+  }
+  // template<int which>
+  // int get_idint(const char* id); const{
+  //   static_assert(which>0 ,"get_idint must be with nonnegative value for 'which'");
+  //   static_assert(which<=2 ,"get_idint<which> must have 'which' <=2");
+  //   khint_t k;
+  //   vdict_t *d = (vdict_t*)h->dict[which];
+  //   k = kh_get(vdict, d, id);
+  //   return k == kh_end(d)? -1 : kh_val(d, k).id;
+  // }
+  auto view_samples() const{
+    ranges::span<char *, -1> ret =
+        ranges::span<char *>(header->samples, header->n[2]);
+    return ranges::views::transform([](const char* x){
+      return std::string_view(x);
+    });
+
+  }
+
+  int32_t num_samples()const{
+    return header->n[2];
+  }
+  int32_t num_contigs()const {
+    return header->n[1];
+  }
+  int32_t num_ID()const {
+    return header->n[0];
+  }
+  int id2length(int idx) const{
+    return bcf_hdr_id2length(header,BCF_HL_INFO,idx);
+  }
+  auto get_IDs() const {
+    const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
+    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var{
+      return idpair2HL(&idp);
+    });
+    return transformed_r;
+  }
+  auto get_INFOs() const {
+    const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
+    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var {
+      return idpair2HL(&idp);
+    });
+    auto filtered_r = ranges::views::filter(transformed_r,[](const vl_var &v) {
+      return std::visit([](auto && vlvv) -> bool { return vlvv.HL_type()==1;},v);
+    });
+    return ranges::views::transform(filtered_r,[](const vl_var &v){
+      return std::get<HeaderLine<1>>(v);
+    });
+  }
+  ranges::subrange<bcf_hrec_t **, bcf_hrec_t **, ranges::subrange_kind::sized>
+  get_hrecs() const{
+    return ranges::views::counted(header->hrec,header->nhrec);
+  }
+  int32_t num_header_records() const{
+    return header->nhrec;
+  }
+
+};
+
+
+
 
 class HTSFile{
 public:
   htsFile* file;
   HTSFile(std::string_view file_name,std::string_view args):file(hts_open(file_name.data(),args.data())){};
+  void write_header(const BCFHeader& hdr){
+    if(vcf_hdr_write(this->file,hdr.header)!=0){
+      throw std::runtime_error("Can't write header!");
+    }
+  }
+  BCFHeader readHeader(){
+    BCFHeader hdr;
+    hdr.header = vcf_hdr_read(this->file);
+    if (!hdr.header){
+      throw std::runtime_error("Can't read header!");
+    }
+    return hdr;
+  }
   ~HTSFile(){
     hts_close(file);
   };
+};
+
+
+
+class BCFFile{
+public:
+  HTSFile file;
+  BCFHeader header;
+
+  BCFFile(std::string_view file_name, std::string_view args="r"):file(file_name,args),header(file.readHeader()){};
+};
+
+
+class BCFWriter{
+public:
+  BCFFile file;
+  BCFWriter(std::string_view file_name,BCFHeader):BCFFile
+
+}
+
+class Synced_BCFs{
+public:
+  bcf_srs_t* sr;
+
+  Synced_BCFs(int pairing_behavior=0):sr(bcf_sr_init()){
+    bcf_sr_set_opt(this->sr,BCF_SR_PAIR_LOGIC,BCF_SR_PAIR_EXACT);
+  };
+
+  void add_reader(const char* fname){
+    if(this->sr && bcf_sr_add_reader(this->sr,fname)!=0){
+      throw std::runtime_error("Can't add to synced BCF reader!");
+    }
+  }
+  void set_threads(const int n_threads){
+    if(this->sr && bcf_sr_set_threads(this->sr,n_threads)!=1){
+      throw std::runtime_error("Can't allocate thread pool!");
+    }
+  }
+  Synced_BCFs(const Synced_BCFs& other) = delete;
+  Synced_BCFs& operator=(const Synced_BCFs& other) = delete;
+
+  Synced_BCFs(Synced_BCFs&& other) noexcept : sr(std::exchange(other.sr,nullptr))
+  {}
+  Synced_BCFs& operator=(Synced_BCFs&& other) noexcept {
+    std::swap(sr,other.sr);
+    return *this;
+  }
+  ~Synced_BCFs(){
+    if(sr){
+      bcf_sr_destroy_threads(sr);
+      bcf_sr_destroy(sr);
+    }
+  }
+
+  // template<typename T>
+  // void add_readers(T fname_begin, T fname_end){
+  //   for(auto iff =fname_begin; iff!=fname_end; iff++){
+  //     add_reader(iff);
+  //   }
+  // }
+
+
+
 };
 
 
@@ -103,10 +286,6 @@ public:
   bcf_idinfo_t* val;
   BCF_ID_Tag(char* key_,bcf_idinfo_t *val_):key(key_),val(val_){
   };
-
-
-  // int id_int(const BCFHeader& hdr,) const {
-  //   bcf_hdr_id2int(
 };
 
 
@@ -180,97 +359,12 @@ public:
 
 
 
-class BCFHeader{
-public:
-  bcf_hdr_t * header;
-  mutable std::optional<int> gt_id;
-  BCFHeader(HTSFile &file):header(bcf_hdr_read(file.file)){}
-  ~BCFHeader(){
-    bcf_hdr_destroy(header);
-  }
-  std::optional<int> get_GT_id() const{
-    if(!gt_id){
-      int tag_id = bcf_hdr_id2int(header, BCF_DT_ID, "GT");
-      if (bcf_hdr_idinfo_exists(header,BCF_HL_FMT,tag_id) )
-        gt_id=tag_id;    // no such FORMAT field in the header
-    }
-    return gt_id;
-  }
-  std::string_view get_chrom(std::int32_t chrom_id) const {
-    auto ret = header->id[BCF_DT_CTG][chrom_id].key;
-    return ret;
-  };
-  std::uint8_t get_chrom_variantkey(std::int32_t chrom_id) const {
-    auto ret_chrom = get_chrom(chrom_id);
-    return encode_chrom(ret_chrom.data(),ret_chrom.size());
-
-  }
-  // template<int which>
-  // int get_idint(const char* id); const{
-  //   static_assert(which>0 ,"get_idint must be with nonnegative value for 'which'");
-  //   static_assert(which<=2 ,"get_idint<which> must have 'which' <=2");
-  //   khint_t k;
-  //   vdict_t *d = (vdict_t*)h->dict[which];
-  //   k = kh_get(vdict, d, id);
-  //   return k == kh_end(d)? -1 : kh_val(d, k).id;
-  // }
-  auto view_samples() const{
-    ranges::span<char *, -1> ret =
-        ranges::span<char *>(header->samples, header->n[2]);
-    return ranges::views::transform([](const char* x){
-      return std::string_view(x);
-    });
-
-  }
-
-  int32_t num_samples()const{
-    return header->n[2];
-  }
-  int32_t num_contigs()const {
-    return header->n[1];
-  }
-  int32_t num_ID()const {
-    return header->n[0];
-  }
-  int id2length(int idx) const{
-    return bcf_hdr_id2length(header,BCF_HL_INFO,idx);
-  }
-  auto get_IDs() const {
-    const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
-    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var{
-      return idpair2HL(&idp);
-    });
-    return transformed_r;
-  }
-  auto get_INFOs() const {
-    const ::ranges::span<bcf_idpair_t> counted_r(header->id[0],header->n[0]);
-    auto transformed_r=ranges::views::transform(counted_r,[](const bcf_idpair_t & idp) -> vl_var {
-      return idpair2HL(&idp);
-    });
-    auto filtered_r = ranges::views::filter(transformed_r,[](const vl_var &v) {
-      return std::visit([](auto && vlvv) -> bool { return vlvv.HL_type()==1;},v);
-    });
-    return ranges::views::transform(filtered_r,[](const vl_var &v){
-      return std::get<HeaderLine<1>>(v);
-    });
-  }
-  ranges::subrange<bcf_hrec_t **, bcf_hrec_t **, ranges::subrange_kind::sized>
-  get_hrecs() const{
-    return ranges::views::counted(header->hrec,header->nhrec);
-  }
-  int32_t num_header_records() const{
-    return header->nhrec;
-  }
-};
 
 
-class BCFFile{
-public:
-  HTSFile file;
-  BCFHeader header;
 
-  BCFFile(std::string_view file_name, std::string_view args="r"):file(file_name,args),header(file){};
-};
+
+
+
 
 class BCFFmts{
 public:
@@ -324,7 +418,9 @@ public:
   UnpackedBCFLine():line(bcf_init1()){
     //    bcf_unpack(line,Fields);
   };
-  ~UnpackedBCFLine(){bcf_destroy1(line);}
+  ~UnpackedBCFLine(){
+      bcf_destroy1(line);
+  }
   std::optional<std::string_view> get_ID(){
     if(line->d.id[0]=='.')
       return std::nullopt;
@@ -346,6 +442,7 @@ public:
     return line->pos;
   }
   BCFFmts get_FMTs() const {
+    static_assert(Fields ==BCF_UN_ALL,"Fields must include the format fields!");
     return BCFFmts(line->d.fmt,line->n_fmt);
   }
 
@@ -390,9 +487,6 @@ public:
   }
 
 };
-
-
-
 
 
 

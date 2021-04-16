@@ -1,6 +1,6 @@
 #pragma once
 
-#include "htslib/vcf.h"
+#include "hts_includes.hpp"
 #include <range/v3/view/facade.hpp>
 #include <cstring>
 #define bcf_int64_vector_end (-9223372036854775807LL) /* INT64_MIN + 1 */

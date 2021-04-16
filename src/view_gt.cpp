@@ -36,8 +36,6 @@ int main(int argc, char** argv){
       std::cout << options.help() << std::endl;
       exit(0);
     }
-
-
      std::vector<std::string> vcf_files(result.count("file"));
    if(vcf_files.size()==0){
       std::cerr<<"must specify at least 1 bcf file"<<std::endl;
